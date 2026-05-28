@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <link rel="stylesheet" href="../style.css">
+    <style>
+        body { height: 100vh; display: block; overflow: hidden; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: #0A192F; color: #e6f1ff; margin: 0; padding: 0; }
+        .governance-container { display: grid; grid-template-columns: 400px 1fr; height: 100vh; background: #060d1a; }
+        
+        /* 左侧策略与脱敏管理面板 */
+        .policy-sidebar { background: #112240; padding: 20px; border-right: 1px solid rgba(255,255,255,0.05); display: flex; flex-direction: column; gap: 20px; overflow-y: auto; }
+        .panel-heading { font-size: 15px; font-weight: bold; color: #ccd6f6; border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 12px; display: flex; align-items: center; gap: 8px; }
+        
+        .rule-card { background: #0A192F; border: 1px solid rgba(255,255,255,0.05); border-radius: 6px; padding: 12px; margin-bottom: 10px; }
+        .rule-header { display: flex; justify-content: space-between; align-items: center; font-size: 12px; margin-bottom: 6px; }
+        .rule-tag { background: rgba(0, 245, 212, 0.1); color: var(--primary, #00F5D4); padding: 20px 6px; border-radius: 3px; font-size: 10px; transform: scale(0.9); }
+        .rule-tag.high { background: rgba(255,77,79,0.1); color: #ff4d4f; }
+        
+        /* 右侧硬核合规干预工作台 */
+        .audit-canvas { padding: 20px; display: flex; flex-direction: column; gap: 20px; overflow-y: auto; position: relative; }
+        .hitl-alert-box { background: linear-gradient(135deg, rgba(255,77,79,0.15) 0%, rgba(17,34,64,0.4) 100%); border: 1px solid #ff4d4f; border-radius: 6px; padding: 20px; box-shadow: 0 0 20px rgba(255,77,79,0.1); transition: all 0.5s ease; }
+        
+        .token-mask-view { background: #112240; border-radius: 6px; border: 1px solid rgba(255,255,255,0.05); padding: 15px; font-family: monospace; font-size: 13px; line-height: 1.6; color: #ccd6f6; position: relative; }
+        .masked-token { background: rgba(0, 245, 212, 0.15); border: 1px dashed var(--primary,#00F5D4); color: var(--primary,#00F5D4); padding: 0 4px; border-radius: 3px; font-weight: bold; }
+        .blocked-action { background: rgba(255,77,79,0.2); border: 1px dashed #ff4d4f; color: #ff4d4f; padding: 0 4px; border-radius: 3px; font-weight: bold; }
+        
+        /* 仿真控制按钮 */
+        .btn-gov { background: #ff4d4f; color: white; border: none; padding: 10px 20px; border-radius: 4px; font-weight: bold; cursor: pointer; font-size: 13px; box-shadow: 0 4px 15px rgba(255,77,79,0.3); transition: all 0.2s; }
+        .btn-gov:hover { background: #ff7875; box-shadow: 0 4px 20px rgba(255,77,79,0.5); }
+        .btn-secondary { background: transparent; border: 1px solid rgba(255,255,255,0.2); color: #8892b0; padding: 10px 20px; border-radius: 4px; cursor: pointer; font-size: 13px; margin-left: 10px; }
+        .btn-secondary:hover { border-color: #8892b0; color: #ccd6f6; }
+
+        .opa-code-block { background: #060d1a; padding: 12px; border-radius: 4px; color: #8892b0; font-size: 11px; font-family: monospace; border: 1px solid rgba(255,255,255,0.02); margin-top: 10px; overflow-x: auto;}
+    </style>
+</head>
+<body>
+
+    <div class="governance-container">
+        
+        <div class="policy-sidebar">
+            <div class="panel-heading">🛡️ OPA 策略引擎规则集</div>
+            
+            <div class="rule-card">
+                <div class="rule-header">
+                    <span style="font-weight:bold;">rule_prompt_injection</span>
+                    <span class="rule-tag high">CRITICAL</span>
+                </div>
+                <div style="font-size:11px; color:#8892b0;">实时解构并拦截研发侧越权提示词注入（Prompt Wall 机制）。</div>
+            </div>
+            
+            <div class="rule-card">
+                <div class="rule-header">
+                    <span style="font-weight:bold;">rule_data_masking</span>
+                    <span class="rule-tag">ACTIVE</span>
+                </div>
+                <div style="font-size:11px; color:#8892b0;">采用命名实体识别（NER）对出域代码执行 IP、密码及敏感密钥脱敏。</div>
+            </div>
+
+            <div class="rule-card">
+                <div class="rule-header">
+                    <span style="font-weight:bold;">rule_abac_sandbox</span>
+                    <span class="rule-tag">ACTIVE</span>
+                </div>
+                <div style="font-size:11px; color:#8892b0;">基于属性的访问控制（ABAC），审计 MicroVM 沙箱内部的高危网络行为。</div>
+            </div>
+
+            <div class="panel-heading" style="margin-top:10px;">🧬 动态 Rego 策略定义</div>
+            <div class="opa-code-block">
+package play.abac<br>
+default allow = false<br><br>
+allow {<br>
+&nbsp;&nbsp;&nbsp;&nbsp;user.role == "architecture_tl"<br>
+&nbsp;&nbsp;&nbsp;&nbsp;action.type == "bypass_audit"<br>
+}<br>
+deny {<br>
+&nbsp;&nbsp;&nbsp;&nbsp;input.action == "Wipe-Out-Scan"<br>
+&nbsp;&nbsp;&nbsp;&nbsp;not input.has_human_override<br>
+}
+            </div>
+        </div>
+        
+        <div class="audit-canvas">
+            <div style="font-size:16px; font-weight:bold; color:#ccd6f6;">🧑‍✈️ 人类最终决策点 (Human-In-The-Loop) 联合审计</div>
+            
+            <div class="hitl-alert-box" id="hitlAlertBox">
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px;">
+                    <span style="font-size:14px; font-weight:bold; color:#ff4d4f; display:flex; align-items:center; gap:8px;">
+                        🚨 SYSTEM BLOCKED: 策略越权防御触发现场
+                    </span>
+                    <span style="font-size:11px; background:rgba(255,77,79,0.2); padding:2px 8px; border-radius:3px; color:#ff4d4f; font-weight:bold;">
+                        待批复 (BLOCKED)
+                    </span>
+                </div>
+                
+                <p style="font-size:12px; color:#ccd6f6; line-height:1.6; margin-bottom:15px;">
+                    <strong>安全阻断元数据 ：</strong> Coding Agent 在隔离沙箱编译容器中进行压测自愈逻辑推演时，试图对内部生产环境执行 <span class="blocked-action">[Wipe-Out-Scan]</span> 嗅探行为。OPA 引擎已切断当前分支合流流水线，并启动数据资产脱敏网格进行流量阻断，等待高级系统架构师（人类）最终干预。
+                </p>
+                
+                <div style="font-size:11px; color:#8892b0; margin-bottom:6px;">🔄 脱敏引擎（Data Masking Engine）上下文反向还原视窗：</div>
+                <div class="token-mask-view" id="maskView">
+                    &lt;ctx_explorer_payload&gt;<br>
+                    &nbsp;&nbsp;dial --target <span class="masked-token">[MASK_IP_1]</span> --port <span class="masked-token">[MASK_PORT_CLUSTER]</span> --mode encrypted;<br>
+                    &nbsp;&nbsp;auth_token = <span class="masked-token">[MASK_AUTH_SECRET_KEY]</span>;<br>
+                    &nbsp;&nbsp;action_type = <span class="blocked-action">"Wipe-Out-Scan"</span>;<br>
+                    &lt;/ctx_explorer_payload&gt;
+                </div>
+                
+                <div style="margin-top:20px; display:flex; align-items:center;">
+                    <button class="btn-gov" onclick="triggerApprove()">批准自愈 Patch 并跨越策略墙</button>
+                    <button class="btn-secondary" onclick="alert('安全审计拒绝成功！已命令 Agent 终止对该微服务链路的所有重构探测，并回滚沙箱。')">拒绝放行</button>
+                </div>
+            </div>
+            
+            <div style="background:#112240; padding:15px; border-radius:6px; border:1px solid rgba(255,255,255,0.05);">
+                <div style="font-size:12px; font-weight:bold; color:var(--primary,#00F5D4); margin-bottom:10px;">📋 合规留痕与防篡改审计日志（Immutable Audit Trail）</div>
+                <div style="font-family:monospace; font-size:11px; color:#8892b0; line-height:1.8;" id="auditTrail">
+                    [18:24:08] [POLICY_ENGINE] 策略对齐开始：匹配资源 ➔ order-service/domain/Order.go<br>
+                    [18:24:08] [MASK_ENGINE] NER 识别算法命中关键生产 IP 资源，自动替换为 [MASK_IP_1]。<br>
+                    [18:24:08] [OPA_GATE] 阻断命中！由于动作 "Wipe-Out-Scan" 违反企业三级架构合规基线。流水线已锁死。
+                </div>
+            </div>
+            
+        </div>
+        
+    </div>
+
+    <script>
+        function triggerApprove() {
+            // 联动改变页面状态：变为通过
+            const box = document.getElementById('hitlAlertBox');
+            box.style.borderColor = 'var(--primary, #00F5D4)';
+            box.style.background = 'linear-gradient(135deg, rgba(0, 245, 212, 0.05) 0%, rgba(11,34,64,0.4) 100%)';
+            box.style.boxShadow = '0 0 20px rgba(0, 245, 212, 0.1)';
+            
+            box.innerHTML = `
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px;">
+                    <span style="font-size:14px; font-weight:bold; color:var(--primary, #00F5D4); display:flex; align-items:center; gap:8px;">
+                        🛡️ OPA ENGINE PASSED: 人类安全决策授权完成
+                    </span>
+                    <span style="font-size:11px; background:rgba(0, 245, 212, 0.2); padding:2px 8px; border-radius:3px; color:var(--primary, #00F5D4); font-weight:bold;">
+                        已放行 (PASSED)
+                    </span>
+                </div>
+                <p style="font-size:12px; color:#ccd6f6; line-height:1.6; margin:0;">
+                    高级系统架构师（人类）已点击大红色的 <strong>“批准自愈 Patch 并跨越策略墙”</strong> 按钮，成功豁免此次动态脱敏网关的越权审计。底层策略引擎（Rego）已动态追加 <code>has_human_override = true</code> 标志位。代码已安全流转并成功合流至主干分支。
+                </p>
+            `;
+            
+            // 追加审计日志
+            const trail = document.getElementById('auditTrail');
+            trail.innerHTML += `<br><span style="color:var(--primary, #00F5D4);">[18:26:42] [HITL_INTERVENTION] 人类架构师执行 [bypass_audit] 动作。安全隔离解除，DAG 流水线恢复并流转至合流部署节点。</span>`;
+        }
+    </script>
+</body>
+</html>
