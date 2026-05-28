@@ -3,22 +3,51 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>我的个人网站</title>
+    <title>AI-Native 研发平台 - 可视化交互原型</title>
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
 
-    <nav class="navbar">
-        <div class="logo">MyWebsite</div>
-        <ul class="nav-links">
-            <li><a href="pages/home.html" target="content-frame">首页</a></li>
-            <li><a href="pages/about.html" target="content-frame">关于我</a></li>
-            <li><a href="pages/contact.html" target="content-frame">联系方式</a></li>
-        </ul>
-    </nav>
+    <header>
+        <div class="logo-area">
+            <div class="logo">AI-Native OS</div>
+        </div>
+        <div class="nav-tabs">
+            <a class="nav-item" href="#">仪表盘</a>
+            <a class="nav-item" href="#">需求中心</a>
+            <a class="nav-item" href="#">架构图谱</a>
+            <a class="nav-item active" href="pages/workspace.html" target="main-frame">AI Workspace (开发)</a>
+            <a class="nav-item" href="#">Workflow 编排</a>
+            <a class="nav-item" href="#">安全治理中心</a>
+        </div>
+        <div class="user-profile">
+            <span>高级架构师 (人类)</span>
+            <div class="avatar">TL</div>
+        </div>
+    </header>
 
-    <div class="content-container">
-        <iframe src="pages/home.html" name="content-frame"></iframe>
+    <div class="status-bar">
+        <div>
+            <span style="color: var(--text-muted)">当前协同任务：</span>
+            <strong>#99823 订单中心高并发减库存架构重构</strong>
+        </div>
+        <div style="display: flex; align-items: center; gap: 14px;">
+            <div>变更风险阻断率: <span style="color:var(--primary)">99.2%</span></div>
+            <div class="risk-badge">🚨 变更风险评估: MEDIUM</div>
+            <div>系统状态: <span style="color: var(--indicator-awaiting)">🟢 Awaiting Human Review</span></div>
+        </div>
+    </div>
+
+    <iframe class="iframe-container" src="pages/workspace.html" name="main-frame"></iframe>
+
+    <div class="bottom-bar">
+        <div class="prompt-input-container">
+            <input type="text" class="prompt-input" placeholder="输入人类指令进行重导（例如：“调整重构策略，不采用红锁而改用分布式乐观锁CAS机制再编译一次”)...">
+        </div>
+        <div class="action-buttons">
+            <button class="btn-main btn-secondary" onclick="alert('工作流分支已被驳回，AI正在退回上一节点重新解构。')">↩️ 驳回重构</button>
+            <button class="btn-main btn-primary" onclick="alert('✅ 变更集审批通过！代码已自动推送到 Git 主干并触发灰度流水线发布。')">⚖️ 接受并合并代码到主干</button>
+        </div>
     </div>
 
 </body>
