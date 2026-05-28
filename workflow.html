@@ -1,0 +1,580 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI-Native Engineering Platform - Workflow & Governance Center</title>
+    <style>
+        :root {
+            --bg-base: #0A192F;
+            --bg-surface: #112240;
+            --bg-element: #233554;
+            --color-text-primary: #CCD6F6;
+            --color-text-muted: #8892B0;
+            --color-mint: #00F5D4;
+            --color-blue: #00B4D8;
+            --color-amber: #FFB703;
+            --color-danger: #FF4D4D;
+            --border-light: rgba(0, 245, 212, 0.15);
+            --font-family: 'Google Sans', 'Segoe UI', Arial, sans-serif;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            background-color: var(--bg-base);
+            color: var(--color-text-primary);
+            font-family: var(--font-family);
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+            overflow: hidden;
+        }
+
+        /* 统一置顶导航栏 */
+        header {
+            background-color: #020C1B;
+            padding: 0 24px;
+            height: 56px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            border-bottom: 1px solid var(--border-light);
+            box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+            z-index: 10;
+        }
+
+        .logo-area {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .logo-icon {
+            width: 24px;
+            height: 24px;
+            border-radius: 4px;
+            background: linear-gradient(135deg, var(--color-mint), var(--color-blue));
+            box-shadow: 0 0 10px var(--color-mint);
+        }
+
+        .logo-title {
+            font-size: 14pt;
+            font-weight: 600;
+            letter-spacing: 0.5px;
+            background: linear-gradient(to right, #FFF, var(--color-text-primary));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        nav {
+            display: flex;
+            gap: 8px;
+            height: 100%;
+            align-items: center;
+        }
+
+        nav a {
+            color: var(--color-text-muted);
+            text-decoration: none;
+            padding: 6px 14px;
+            font-size: 10pt;
+            border-radius: 4px;
+            transition: all 0.2s ease;
+        }
+
+        nav a:hover {
+            color: var(--color-mint);
+            background-color: rgba(0, 245, 212, 0.05);
+        }
+
+        nav a.active {
+            color: var(--color-mint);
+            background-color: rgba(0, 245, 212, 0.1);
+            border: 1px solid var(--border-light);
+        }
+
+        .user-badge {
+            font-size: 9pt;
+            background: rgba(0, 180, 216, 0.1);
+            border: 1px solid rgba(0, 180, 216, 0.3);
+            padding: 4px 10px;
+            border-radius: 20px;
+            color: var(--color-blue);
+        }
+
+        /* 主画布布局 */
+        .main-container {
+            display: flex;
+            flex: 1;
+            overflow: hidden;
+        }
+
+        /* 左侧：工作流 DAG 编排视图 */
+        .workflow-panel {
+            flex: 3;
+            border-right: 1px solid rgba(255,255,255,0.05);
+            display: flex;
+            flex-direction: column;
+            background-image: radial-gradient(rgba(0, 245, 212, 0.03) 1px, transparent 0);
+            background-size: 24px 24px;
+            position: relative;
+        }
+
+        .panel-header {
+            background-color: rgba(17, 34, 64, 0.8);
+            padding: 12px 20px;
+            border-bottom: 1px solid rgba(255,255,255,0.05);
+            backdrop-filter: blur(8px);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .panel-title {
+            font-size: 11pt;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .badge-live {
+            background-color: rgba(0, 245, 212, 0.1);
+            color: var(--color-mint);
+            font-size: 8pt;
+            padding: 2px 6px;
+            border-radius: 4px;
+            border: 1px solid var(--border-light);
+        }
+
+        /* DAG 画布模拟 */
+        .dag-canvas {
+            flex: 1;
+            position: relative;
+            padding: 40px;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            align-items: center;
+            overflow-y: auto;
+        }
+
+        .dag-layer {
+            display: flex;
+            justify-content: center;
+            gap: 60px;
+            width: 100%;
+            position: relative;
+        }
+
+        /* SVG 连线层 */
+        .dag-svg-layer {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 1;
+        }
+
+        .dag-node {
+            background-color: var(--bg-surface);
+            border: 1px solid rgba(255,255,255,0.08);
+            border-radius: 6px;
+            width: 220px;
+            padding: 12px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.4);
+            z-index: 2;
+            cursor: pointer;
+            transition: all 0.25s ease;
+            position: relative;
+        }
+
+        .dag-node:hover {
+            border-color: var(--color-blue);
+            box-shadow: 0 0 12px rgba(0, 180, 216, 0.2);
+            transform: translateY(-2px);
+        }
+
+        .dag-node.active {
+            border-color: var(--color-mint);
+            box-shadow: 0 0 15px rgba(0, 245, 212, 0.25);
+            background-color: rgba(17, 34, 64, 0.9);
+        }
+
+        .node-meta {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 6px;
+            font-size: 8pt;
+            color: var(--color-text-muted);
+        }
+
+        .node-name {
+            font-size: 10pt;
+            font-weight: 500;
+            color: #FFF;
+            margin-bottom: 8px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-transform: p;
+        }
+
+        .node-status {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 8.5pt;
+        }
+
+        /* 状态灯球 */
+        .status-dot {
+            width: 7px;
+            height: 7px;
+            border-radius: 50%;
+            display: inline-block;
+        }
+        .dot-thinking { background-color: var(--color-blue); box-shadow: 0 0 6px var(--color-blue); }
+        .dot-awaiting { background-color: var(--color-mint); box-shadow: 0 0 6px var(--color-mint); }
+        .dot-tool { background-color: var(--color-amber); box-shadow: 0 0 6px var(--color-amber); }
+        .dot-blocked { background-color: var(--color-danger); box-shadow: 0 0 6px var(--color-danger); }
+
+        /* 右侧：安全治理与策略监控审计（Policy Guard） */
+        .governance-panel {
+            flex: 2;
+            background-color: #0B1E36;
+            display: flex;
+            flex-direction: column;
+            overflow-y: auto;
+        }
+
+        .gov-section {
+            padding: 20px;
+            border-bottom: 1px solid rgba(255,255,255,0.05);
+        }
+
+        .gov-section-title {
+            font-size: 10.5pt;
+            font-weight: 600;
+            color: #FFF;
+            margin-bottom: 14px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            border-left: 3px solid var(--color-mint);
+            padding-left: 8px;
+        }
+
+        /* OPA 策略卡片 */
+        .policy-card {
+            background-color: var(--bg-surface);
+            border-radius: 6px;
+            border: 1px solid rgba(255,255,255,0.05);
+            padding: 14px;
+            margin-bottom: 12px;
+        }
+
+        .policy-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+
+        .policy-tag {
+            font-size: 8pt;
+            font-family: monospace;
+            background: rgba(255, 77, 77, 0.1);
+            color: var(--color-danger);
+            padding: 2px 6px;
+            border-radius: 4px;
+            border: 1px solid rgba(255, 77, 77, 0.2);
+        }
+
+        .policy-tag.pass {
+            background: rgba(0, 245, 212, 0.1);
+            color: var(--color-mint);
+            border: 1px solid rgba(0, 245, 212, 0.2);
+        }
+
+        /* 规整的代码块组件 */
+        pre {
+            background-color: #050C16;
+            padding: 10px;
+            border-radius: 4px;
+            font-family: 'Courier New', Courier, monospace;
+            font-size: 9pt;
+            color: #A5B4FC;
+            overflow-x: auto;
+            border: 1px solid rgba(255,255,255,0.03);
+            line-height: 1.4;
+        }
+
+        /* 脱敏敏感字段高亮组件 */
+        .mask-preview {
+            background-color: #050C16;
+            padding: 12px;
+            border-radius: 4px;
+            font-family: monospace;
+            font-size: 9pt;
+            line-height: 1.6;
+        }
+
+        .masked-token {
+            background-color: rgba(255, 183, 3, 0.15);
+            color: var(--color-amber);
+            border: 1px dashed var(--color-amber);
+            padding: 0 4px;
+            border-radius: 3px;
+            font-weight: bold;
+        }
+
+        /* 悬浮交互式按钮提示 */
+        .interactive-footer {
+            background-color: rgba(17, 34, 64, 0.9);
+            padding: 12px 20px;
+            border-top: 1px solid rgba(255,255,255,0.05);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 9.5pt;
+        }
+
+        .btn-action {
+            background: linear-gradient(135deg, #FF4D4D, #D62828);
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 4px;
+            font-weight: 500;
+            cursor: pointer;
+            box-shadow: 0 4px 12px rgba(255, 77, 77, 0.2);
+            transition: all 0.2s ease;
+        }
+
+        .btn-action:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 4px 16px rgba(255, 77, 77, 0.4);
+        }
+
+        .btn-action.resolve {
+            background: linear-gradient(135deg, var(--color-mint), #00B4D8);
+            color: #0A192F;
+            box-shadow: 0 4px 12px rgba(0, 245, 212, 0.2);
+        }
+
+        /* 局部动态更新提示 */
+        .toast-info {
+            font-size: 8.5pt;
+            color: var(--color-mint);
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0% { opacity: 0.6; }
+            50% { opacity: 1; }
+            100% { opacity: 0.6; }
+        }
+    </style>
+</head>
+<body>
+
+    <header>
+        <div class="logo-area">
+            <div class="logo-icon"></div>
+            <div class="logo-title">AI-Native Engineering OS</div>
+        </div>
+        <nav>
+            <a href="index.html">仪表盘</a>
+            <a href="workspace.html">AI Workspace</a>
+            <a href="workflow.html" class="active">Workflow 编排中心</a>
+            <a href="governance.html">安全治理中心</a>
+        </nav>
+        <div class="user-badge">高级架构师 (人类)</div>
+    </header>
+
+    <div class="main-container">
+        
+        <div class="workflow-panel">
+            <div class="panel-header">
+                <div class="panel-title">
+                    <span>有状态异步编排引擎 (DAG Canvas)</span>
+                    <span class="badge-live">PIPELINE #99823</span>
+                </div>
+                <div class="toast-info">💡 点击 DAG 节点可联调联动右侧安全策略</div>
+            </div>
+
+            <div class="dag-canvas">
+                <svg class="dag-svg-layer">
+                    <line x1="50%" y1="75" x2="25%" y2="195" stroke="rgba(0, 180, 216, 0.4)" stroke-width="2" stroke-dasharray="4"/>
+                    <line x1="50%" y1="75" x2="75%" y2="195" stroke="rgba(0, 180, 216, 0.4)" stroke-width="2" stroke-dasharray="4"/>
+                    <line x1="25%" y1="255" x2="50%" y2="375" stroke="rgba(0, 245, 212, 0.5)" stroke-width="2" />
+                    <line x1="75%" y1="255" x2="50%" y2="375" stroke="rgba(255, 77, 77, 0.5)" stroke-width="2" />
+                    <line x1="50%" y1="435" x2="50%" y2="555" stroke="rgba(255, 183, 3, 0.4)" stroke-width="2" stroke-dasharray="4"/>
+                </svg>
+
+                <div class="dag-layer" style="margin-top: 10px;">
+                    <div class="dag-node" id="node-req" onclick="selectNode('req')">
+                        <div class="node-meta"><span>Step 1 / Async</span><span>Agent</span></div>
+                        <div class="node-name">Requirement Agent</div>
+                        <div class="node-status"><span class="status-dot dot-tool"></span><span style="color:var(--color-amber)">Tool Calling (解析PRD)</span></div>
+                    </div>
+                </div>
+
+                <div class="dag-layer">
+                    <div class="dag-node" id="node-arch" onclick="selectNode('arch')">
+                        <div class="node-meta"><span>Step 2.1 / Parallel</span><span>Agent</span></div>
+                        <div class="node-name">Architecture Agent</div>
+                        <div class="node-status"><span class="status-dot dot-thinking"></span><span style="color:var(--color-blue)">Thinking (时序拓扑推演)</span></div>
+                    </div>
+                    <div class="dag-node active" id="node-code" onclick="selectNode('code')">
+                        <div class="node-meta"><span>Step 2.2 / Parallel</span><span>Agent</span></div>
+                        <div class="node-name">Coding & Patch Agent</div>
+                        <div class="node-status"><span class="status-dot dot-awaiting"></span><span style="color:var(--color-mint)">Awaiting Human Review</span></div>
+                    </div>
+                </div>
+
+                <div class="dag-layer">
+                    <div class="dag-node" id="node-gov" onclick="selectNode('gov')">
+                        <div class="node-meta"><span>Step 3 / Security</span><span>Gate</span></div>
+                        <div class="node-name">OPA Policy Engine</div>
+                        <div class="node-status"><span class="status-dot dot-blocked"></span><span style="color:var(--color-danger)">Blocked (触发安全卡点)</span></div>
+                    </div>
+                </div>
+
+                <div class="dag-layer" style="margin-bottom: 10px;">
+                    <div class="dag-node" id="node-sre" onclick="selectNode('sre')">
+                        <div class="node-meta"><span>Step 4 / SRE</span><span>Sandbox</span></div>
+                        <div class="node-name">Canary SRE Agent</div>
+                        <div class="node-status"><span class="status-dot-thinking" style="width:7px; height:7px; background:#475569; border-radius:50%; display:inline-block;"></span><span style="color:var(--color-text-muted)">Pending Stage</span></div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="interactive-footer">
+                <div>当前选中阶段: <strong id="selected-node-text" style="color:var(--color-mint);">Coding & Patch Agent</strong></div>
+                <div id="action-area">
+                    <button class="btn-action" id="btn-hitl" onclick="triggerApprove()">批准自愈 Patch 并跨越策略墙</button>
+                </div>
+            </div>
+        </div>
+        
+        <div class="governance-panel">
+            
+            <div class="gov-section">
+                <div class="gov-section-title">🛡️ OPA 策略合规防御 (Prompt Wall)</div>
+                
+                <div class="policy-card">
+                    <div class="policy-header">
+                        <strong style="font-size:10pt;">规则 ID: rule-anti-downgrade-lock</strong>
+                        <span class="policy-tag" id="policy-status-tag">BLOCKED</span>
+                    </div>
+                    <p style="font-size:9.5pt; color:var(--color-text-muted); margin-bottom:10px;">
+                        检测到 Agent 试图根据历史 RCA 事故报告修改 <span style="color:#FFF; font-family:monospace;">Order.go</span> 的高并发红锁机制。策略引擎判定降低防护标准存在营销超卖二次故障风险。
+                    </p>
+                    <pre id="opa-code">package play.policy
+
+# 默认禁止降级安全锁
+default allow = false
+
+allow {
+    input.action == "UPGRADE_REDIS_LOCK"
+}
+# 触发阻断：当高并发降级为微服务单点行级锁时
+deny[msg] {
+    input.patch_type == "downgrade_to_db_lock"
+    msg := "🚨 [RISK ALERT] 严禁将 Redis 红锁重构退化为传统低吞吐行级锁！"
+}</pre>
+                </div>
+            </div>
+
+            <div class="gov-section">
+                <div class="gov-section-title">👁️ 敏感数据动态脱敏 (Data Masking Engine)</div>
+                <p style="font-size:9pt; color:var(--color-text-muted); margin-bottom:12px;">
+                    在上下文上送大模型底层执行平面之前，平台基于 NER (命名实体识别) 自动对敏感凭证与内网集群 IP 进行脱敏置换，并在回流时执行反向恢复：
+                </p>
+                <div class="mask-preview">
+                    <span style="color: #6EE7B7;">// 原始企业级模型路由连接上下文 (已在流中脱敏)</span><br>
+                    dial_cluster_endpoint := "<span class="masked-token">[MASK_IP_ENDPOINT_1]</span>"<br>
+                    cluster_auth_token  := "<span class="masked-token">[MASK_SECRET_TOKEN_XZ99]</span>"<br><br>
+                    <span style="color: var(--color-text-muted);">// 脱敏字典对齐映射状态：🟢 SECURE</span>
+                </div>
+            </div>
+
+            <div class="gov-section" style="border-bottom:none;">
+                <div class="gov-section-title">📊 治理合规实时度量</div>
+                <div style="display:grid; grid-template-columns: 1fr 1fr; gap: 10px; font-size: 9pt;">
+                    <div style="background:rgba(255,255,255,0.02); padding:10px; border-radius:4px; border:1px solid rgba(255,255,255,0.05)">
+                        <div style="color:var(--color-text-muted);">变更风险阻断率</div>
+                        <div style="font-size:16pt; font-weight:bold; color:var(--color-mint); margin-top:4px;">99.2%</div>
+                    </div>
+                    <div style="background:rgba(255,255,255,0.02); padding:10px; border-radius:4px; border:1px solid rgba(255,255,255,0.05)">
+                        <div style="color:var(--color-text-muted);">今日阻断高危高危调用</div>
+                        <div style="font-size:16pt; font-weight:bold; color:var(--color-danger); margin-top:4px;">14 次</div>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+    <script>
+        // 节点数据联动定义
+        const nodeDetails = {
+            'req': { title: 'Requirement Agent', color: 'var(--color-amber)', text: '解析 PRD 阶段。正在对齐大促边界核心指标。' },
+            'arch': { title: 'Architecture Agent', color: 'var(--color-blue)', text: '架构推演阶段。基于 AST 生成微服务分布式血缘拓扑。' },
+            'code': { title: 'Coding & Patch Agent', color: 'var(--color-mint)', text: 'Awaiting Human Review。代码自愈就绪，等待最终决策。' },
+            'gov': { title: 'OPA Policy Engine', color: 'var(--color-danger)', text: '策略卡点拦截中。检测到敏感数据库红锁规则变更。' },
+            'sre': { title: 'Canary SRE Agent', color: 'var(--color-text-muted)', text: '等待前置流水线通过后启动 MicroVM 沙箱测试。' }
+        };
+
+        function selectNode(nodeId) {
+            // 切换选中样式
+            document.querySelectorAll('.dag-node').forEach(node => node.classList.remove('active'));
+            const currentNode = document.getElementById(`node-${nodeId}`);
+            if(currentNode) currentNode.classList.add('active');
+
+            // 更改控制台底部文字
+            document.getElementById('selected-node-text').innerText = nodeDetails[nodeId].title;
+            document.getElementById('selected-node-text').style.color = nodeDetails[nodeId].color;
+
+            // 动态改变联动行为
+            const actionBtn = document.getElementById('btn-hitl');
+            if(nodeId === 'code' || nodeId === 'gov') {
+                actionBtn.style.display = 'block';
+                actionBtn.innerText = "批准自愈 Patch 并跨越策略墙";
+                actionBtn.className = "btn-action";
+            } else {
+                actionBtn.style.display = 'none';
+            }
+        }
+
+        // 模拟高级架构师点击 HITL 人类最终确认放行交互
+        function triggerApprove() {
+            if(confirm("您当前正作为高级架构师（Human-in-the-loop）执行放行。是否确认强行覆盖 OPA 安全卡点，下发生产沙箱进行 Redis 高并发锁的自愈重构？")) {
+                // 联动改变右侧 OPA 策略标签状态
+                const tag = document.getElementById('policy-status-tag');
+                tag.innerText = "PASSED BY HUMAN";
+                tag.className = "policy-tag pass";
+                
+                // 联动改变左侧 OPA 节点状态为绿色安全放行
+                const govNodeStatus = document.querySelector('#node-gov .node-status');
+                govNodeStatus.innerHTML = '<span class="status-dot dot-awaiting"></span><span style="color:var(--color-mint)">Bypassed (人类授权通过)</span>';
+                
+                // 变更底部状态
+                alert("🚀 放行成功！有状态工作流引擎已跃过策略墙。流水线已成功移交下一步：Canary SRE Agent 进行沙箱 MicroVM 模拟金丝雀发布。");
+                
+                const actionArea = document.getElementById('action-area');
+                actionArea.innerHTML = '<span style="color:var(--color-mint); font-size:9pt;">🟢 Pipeline 正在异步平原平稳运行中...</span>';
+            }
+        }
+    </script>
+</body>
+</html>
