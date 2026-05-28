@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <link rel="stylesheet" href="../style.css">
+    <style>
+        /* 移除子页面 body 的弹性盒结构，让工作区自然占满全屏 */
+        body { height: 100vh; display: block; overflow: hidden; }
+    </style>
+</head>
+<body>
+
+    <div class="workspace-container">
+        
+        <div class="panel-left">
+            <div class="panel-title">
+                <span>📁 Context Explorer (自动追踪)</span>
+                <span style="color: var(--primary); font-size: 10px;">已对齐</span>
+            </div>
+            <div class="context-tree">
+                <div class="tree-folder">
+                    <div class="folder-title">🧬 锁定的 AST 代码依赖</div>
+                    <div class="tree-item active" onclick="loadCode('order')">
+                        <span>order-service/domain/Order.go</span>
+                        <span class="item-tag" style="color: #4af626">已重构</span>
+                    </div>
+                    <div class="tree-item" onclick="loadCode('stock')">
+                        <span>stock-service/api/deduct.grpc</span>
+                        <span class="item-tag">依赖层</span>
+                    </div>
+                </div>
+                <div class="tree-folder">
+                    <div class="folder-title">📄 业务边界上下文</div>
+                    <div class="tree-item" onclick="alert('已锁定PRD业务规则：高并发大促期间不允许出现超卖事故，且Redis集群降级时需保障行级DB事务。')">
+                        <span>📄 2026大促核心指标.prd</span>
+                        <span class="item-tag">PRD</span>
+                    </div>
+                    <div class="tree-item" onclick="alert('技术决策文档：选用分布式Redis红锁阻断超卖流量。')">
+                        <span>📄 ADR-012: 选用Redis红锁.md</span>
+                        <span class="item-tag">决策</span>
+                    </div>
+                </div>
+                <div class="tree-folder">
+                    <div class="folder-title">⚠️ 故障数字孪生记忆</div>
+                    <div class="tree-item" style="color: var(--indicator-risk)" onclick="alert('引入记忆成功！AI已提取2025年营销活动中由于连接池被打满导致锁未释放导致的死锁RCA报告。')">
+                        <span>🚨 RCA-2025: 营销超卖事故报告</span>
+                        <span class="item-tag" style="background:rgba(255,0,0,0.1)">关键</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="panel-center">
+            <div class="canvas-tabs">
+                <div class="canvas-tab active">Code Patch Diff 视图</div>
+                <div class="canvas-tab">Generated Architecture Diagram (时序图)</div>
+                <div class="canvas-tab">TDD 用例自愈终端</div>
+            </div>
+            
+            <div class="code-viewer" id="codeViewer">
+                <div class="diff-line">package domain</div>
+                <div class="diff-line"> </div>
+                <div class="diff-line">func (o *OrderWorkflow) DeductStock(ctx context.Context) error {</div>
+                <div class="diff-line diff-removed">-    // 传统低吞吐行级锁实现</div>
+                <div class="diff-line diff-removed">-    return db.ExecuteTransaction(ctx, "UPDATE stock SET count = count - 1 WHERE id = 1")</div>
+                <div class="diff-line diff-added">+    // AI-Native 根据 ADR-012 以及 RCA-2025 事故自愈生成的 Redis 高并发红锁自愈代码</div>
+                <div class="diff-line diff-added">+    lock := redisCluster.NewLock("lock:order:deduct")</div>
+                <div class="diff-line diff-added">+    if !lock.TryAcquire(ctx, 3 * time.Second) {</div>
+                <div class="diff-line diff-added">+        return ErrorTimeout // 防止连接池打满形成死锁</div>
+                <div class="diff-line diff-added">+    }</div>
+                <div class="diff-line diff-added">+    defer lock.Release(ctx)</div>
+                <div class="diff-line diff-added">+     </div>
+                <div class="diff-line diff-added">+    return stockGrpcClient.Deduct(ctx, &stock.DeductRequest{Id: 1, Qty: 1})</div>
+                <div class="diff-line">}</div>
+            </div>
+
+            <div class="sandbox-console">
+                <div class="console-line">[Platform Sandbox Engine v1.0.4 初始化成功]</div>
+                <div class="console-line">MicroVM-沙箱编译终端隔离建立进程：ID = sandbox-container-99823</div>
+                <div class="console-line">$ go test -v ./stock/domain/... -run TestHighConcurrencyDeduct</div>
+                <div class="console-line" style="color:var(--primary)">=== RUN   TestHighConcurrencyDeduct (3,000 并发压测并发模拟)</div>
+                <div class="console-line" style="color:var(--primary)">--- PASS: TestHighConcurrencyDeduct (0.42s) - 5组断言覆盖率 100%</div>
+                <div class="console-line" style="color:#ee9b00; font-weight: bold;">[提示] 单元测试结果全部跑通，等待上游决策审批合流。</div>
+            </div>
+        </div>
+
+        <div class="panel-right">
+            <div style="font-size: 13px; font-weight: bold; margin-bottom: -4px;">🤖 多 Agent 并发协作链路</div>
+            
+            <div class="agent-card">
+                <div class="agent-header">
+                    <div class="agent-name">Requirement Agent</div>
+                    <span class="status-text awaiting"><span class="status-lamp"></span> 🟢 Awaiting</span>
+                </div>
+                <div class="agent-body">
+                    已成功解构大促指标PRD，输出 5 组针对高并发减库存的 BDD 边界断言规则，已注入上下文。
+                </div>
+            </div>
+
+            <div class="agent-card">
+                <div class="agent-header">
+                    <div class="agent-name">Architecture Agent</div>
+                    <span class="status-text thinking"><span class="status-lamp"></span> 🔵 Thinking</span>
+                </div>
+                <div class="agent-body">
+                    正在根据老版本高并发超卖故障的 RCA 图谱，推演当前代码分支是否隐藏 CAP 分布式事务死锁风险...
+                </div>
+            </div>
+
+            <div class="agent-card">
+                <div class="agent-header">
+                    <div class="agent-name">Coding & TDD Agent</div>
+                    <span class="status-text toolcalling"><span class="status-lamp"></span> 🟡 Tool Call</span>
+                </div>
+                <div class="agent-body">
+                    正在执行隔离沙箱中第 3 次代码重构编译，通过内置 Mock 驱动本地 Redis 哨兵集群。
+                </div>
+            </div>
+
+            <div class="agent-card policy-box" id="policyCard">
+                <div class="agent-header">
+                    <div class="agent-name" style="color: var(--indicator-risk)">🛡️ OPA 策略安全防线</div>
+                    <span class="status-text blocked"><span class="status-lamp"></span> 🛑 拦截卡点</span>
+                </div>
+                <div class="agent-body" style="color: var(--text-main);">
+                    检测到 Coding Agent 在沙箱重构中试图对内部生产环境 IP 执行 <span style="color:var(--indicator-risk)">[Wipe-Out-Scan]</span> 嗅探。安全引擎已自动实施<strong>“动态敏感数据脱敏网关网格”</strong>，将真实 IP 隐藏并动态脱敏替换为 <span style="color:var(--primary)">[MASK_IP_1]</span>。
+                </div>
+                <div class="policy-actions">
+                    <button class="btn btn-approve" onclick="approvePolicy()">批准安全降级</button>
+                    <button class="btn btn-reject" onclick="alert('已拦截高危行为，Agent已挂起并重新推演无害策略。')">拒绝并要求重导</button>
+                </div>
+            </div>
+
+        </div>
+
+    </div>
+
+    <script>
+        function loadCode(type) {
+            const items = document.querySelectorAll('.tree-item');
+            items.forEach(i => i.classList.remove('active'));
+            event.currentTarget.classList.add('active');
+
+            const viewer = document.getElementById('codeViewer');
+            if(type === 'stock') {
+                viewer.innerHTML = `
+<div class="diff-line">syntax = "proto3";</div>
+<div class="diff-line">package stock;</div>
+<div class="diff-line"> </div>
+<div class="diff-line">service StockService {</div>
+<div class="diff-line diff-removed">-    rpc DeductStock (DeductRequest) returns (DeductResponse);</div>
+<div class="diff-line diff-added">+    // 基于高并发防超卖优化的全新自愈幂等扣减接口</div>
+<div class="diff-line diff-added">+    rpc DeductStockWithIdempotency (DeductRequest) returns (DeductResponse);</div>
+<div class="diff-line">}
+                `;
+            } else {
+                viewer.innerHTML = `
+<div class="diff-line">package domain</div>
+<div class="diff-line"> </div>
+<div class="diff-line">func (o *OrderWorkflow) DeductStock(ctx context.Context) error {</div>
+<div class="diff-line diff-removed">-    // 传统低吞吐行级锁实现</div>
+<div class="diff-line diff-removed">-    return db.ExecuteTransaction(ctx, "UPDATE stock SET count = count - 1 WHERE id = 1")</div>
+<div class="diff-line diff-added">+    // AI-Native 根据 ADR-012 以及 RCA-2025 事故自愈生成的 Redis 高并发红锁自愈代码</div>
+<div class="diff-line diff-added">+    lock := redisCluster.NewLock("lock:order:deduct")</div>
+<div class="diff-line diff-added">+    if !lock.TryAcquire(ctx, 3 * time.Second) {</div>
+<div class="diff-line diff-added">+        return ErrorTimeout </div>
+<div class="diff-line diff-added">+    }</div>
+<div class="diff-line diff-added">+    defer lock.Release(ctx)</div>
+<div class="diff-line diff-added">+    return stockGrpcClient.Deduct(ctx, &stock.DeductRequest{Id: 1, Qty: 1})</div>
+<div class="diff-line">}
+                `;
+            }
+        }
+
+        function approvePolicy() {
+            const card = document.getElementById('policyCard');
+            card.style.borderColor = 'var(--border)';
+            card.style.background = 'var(--bg-card)';
+            card.innerHTML = `
+                <div class="agent-header">
+                    <div class="agent-name" style="color: var(--primary)">🛡️ OPA 策略安全防线</div>
+                    <span class="status-text awaiting"><span class="status-lamp"></span> 🟢 已安全放行</span>
+                </div>
+                <div class="agent-body">
+                    人类架构师已批准此次动态脱敏网关的越权审计豁免，数据已被清洗后安全流转。
+                </div>
+            `;
+        }
+    </script>
+</body>
+</html>
