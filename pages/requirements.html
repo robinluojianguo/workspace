@@ -1,0 +1,655 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI-Native Engineering Platform - Requirement Center</title>
+    <style>
+        :root {
+            --bg-main: #0A192F;
+            --bg-card: #112240;
+            --bg-body: #020C1B;
+            --primary: #00F5D4; /* AI Mint Green */
+            --primary-hover: #00d1b2;
+            --text-main: #E2E8F0;
+            --text-muted: #8892B0;
+            --border: #233554;
+            --indicator-thinking: #64DFDF; /* 🔵 Blue */
+            --indicator-awaiting: #4af626; /* 🟢 Green */
+            --indicator-toolcall: #ee9b00; /* 🟡 Yellow */
+            --indicator-risk: #ff4d4f;     /* 🔴 Red */
+            --bg-input: #071224;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Google Sans', 'Segoe UI', -apple-system, BlinkMacSystemFont, sans-serif;
+        }
+
+        body {
+            background-color: var(--bg-body);
+            color: var(--text-main);
+            overflow-x: hidden;
+            padding-bottom: 40px;
+        }
+
+        /* 顶部通栏导航 */
+        .navbar {
+            background-color: var(--bg-main);
+            border-bottom: 1px solid var(--border);
+            padding: 0 24px;
+            height: 60px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+
+        .nav-logo {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            font-size: 16px;
+            font-weight: bold;
+            letter-spacing: 0.5px;
+        }
+
+        .nav-logo span {
+            color: var(--primary);
+        }
+
+        .nav-links {
+            display: flex;
+            gap: 24px;
+            height: 100%;
+        }
+
+        .nav-item {
+            display: flex;
+            align-items: center;
+            color: var(--text-muted);
+            text-decoration: none;
+            font-size: 14px;
+            border-bottom: 2px solid transparent;
+            transition: all 0.3s;
+            cursor: pointer;
+        }
+
+        .nav-item.active, .nav-item:hover {
+            color: var(--primary);
+            border-bottom-color: var(--primary);
+        }
+
+        /* 统一网格布局主体 */
+        .dashboard-container {
+            max-width: 1600px;
+            margin: 24px auto;
+            padding: 0 24px;
+            display: flex;
+            flex-direction: column;
+            gap: 24px;
+        }
+
+        /* 顶层状态指示条 */
+        .status-header-bar {
+            background: var(--bg-main);
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            padding: 14px 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 13px;
+        }
+
+        /* 三栏画布：2.5fr (上下文深度追踪) : 5fr (需求意图及BDD拆解) : 2.5fr (仿真遥测与校验) */
+        .requirement-canvas-grid {
+            display: grid;
+            grid-template-columns: 2.5fr 5fr 2.5fr;
+            gap: 24px;
+        }
+
+        @media (max-width: 1200px) {
+            .requirement-canvas-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .panel-box {
+            background: var(--bg-main);
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+            height: fit-content;
+        }
+
+        .panel-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid var(--border);
+            padding-bottom: 12px;
+        }
+
+        .panel-title {
+            font-size: 14px;
+            font-weight: bold;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        /* 状态呼吸灯体系 */
+        .status-lamp {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            display: inline-block;
+        }
+        .lamp-thinking { background: var(--indicator-thinking); box-shadow: 0 0 6px var(--indicator-thinking); }
+        .lamp-awaiting { background: var(--indicator-awaiting); box-shadow: 0 0 6px var(--indicator-awaiting); }
+        .lamp-toolcall { background: var(--indicator-toolcall); box-shadow: 0 0 6px var(--indicator-toolcall); }
+        .lamp-risk { background: var(--indicator-risk); box-shadow: 0 0 6px var(--indicator-risk); }
+
+        /* 左栏：Context Platform 核心树状关联 */
+        .context-explorer {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .context-section {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 4px;
+            padding: 12px;
+        }
+
+        .context-section-title {
+            font-size: 12px;
+            color: var(--text-muted);
+            margin-bottom: 8px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-weight: bold;
+        }
+
+        .context-item {
+            font-size: 12px;
+            padding: 6px 8px;
+            border-radius: 3px;
+            margin-bottom: 4px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: rgba(2, 12, 27, 0.4);
+            border: 1px solid transparent;
+        }
+
+        .context-item.matched {
+            border-color: rgba(0, 245, 212, 0.3);
+            background: rgba(0, 245, 212, 0.02);
+        }
+
+        .context-item.danger-hit {
+            border-color: rgba(255, 77, 79, 0.4);
+            background: rgba(255, 77, 79, 0.03);
+        }
+
+        /* 中栏：意图输入及 BDD 规则交互引擎 */
+        .intent-input-area {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 4px;
+            padding: 16px;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .textarea-cyber {
+            width: 100%;
+            height: 90px;
+            background: var(--bg-input);
+            border: 1px solid var(--border);
+            border-radius: 4px;
+            color: var(--text-main);
+            padding: 12px;
+            font-size: 13px;
+            resize: none;
+            outline: none;
+            transition: border-color 0.3s;
+        }
+
+        .textarea-cyber:focus {
+            border-color: var(--primary);
+        }
+
+        .template-tags {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+
+        .tag-btn {
+            font-size: 11px;
+            background: var(--bg-body);
+            border: 1px solid var(--border);
+            color: var(--text-muted);
+            padding: 4px 8px;
+            border-radius: 12px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .tag-btn:hover {
+            border-color: var(--primary);
+            color: var(--primary);
+        }
+
+        .action-bar {
+            display: flex;
+            justify-content: flex-end;
+        }
+
+        .btn-trigger {
+            background: rgba(0, 245, 212, 0.1);
+            color: var(--primary);
+            border: 1px solid var(--primary);
+            padding: 8px 18px;
+            font-size: 13px;
+            font-weight: bold;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .btn-trigger:hover {
+            background: var(--primary);
+            color: var(--bg-main);
+            box-shadow: 0 0 12px rgba(0, 245, 212, 0.3);
+        }
+
+        /* BDD 场景容器 */
+        .bdd-container {
+            display: none; /* 动态显示 */
+            flex-direction: column;
+            gap: 16px;
+            animation: fadeIn 0.5s ease-in-out forwards;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .bdd-scenario-block {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 4px;
+            padding: 16px;
+        }
+
+        .bdd-scenario-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 13px;
+            font-weight: bold;
+            margin-bottom: 12px;
+            border-bottom: 1px solid rgba(35, 53, 84, 0.5);
+            padding-bottom: 8px;
+        }
+
+        .bdd-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 12px;
+        }
+
+        .bdd-table td {
+            padding: 8px;
+            vertical-align: top;
+        }
+
+        .keyword-cell {
+            font-weight: bold;
+            color: var(--primary);
+            width: 70px;
+            font-family: monospace;
+            text-align: right;
+            padding-right: 12px !important;
+        }
+
+        .expression-cell {
+            color: var(--text-main);
+            line-height: 1.5;
+        }
+
+        .expression-cell input[type="text"] {
+            background: transparent;
+            border: none;
+            border-bottom: 1px dashed var(--border);
+            color: #ffffff;
+            width: 100%;
+            outline: none;
+            font-size: 12px;
+            padding-bottom: 2px;
+        }
+
+        .expression-cell input[type="text"]:focus {
+            border-bottom-color: var(--primary);
+        }
+
+        .checkbox-cell {
+            width: 30px;
+            text-align: center;
+        }
+
+        /* 右栏：策略引擎围栏及指标实时监控 */
+        .policy-stream {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            font-family: monospace;
+            font-size: 11px;
+            background: var(--bg-body);
+            padding: 12px;
+            border-radius: 4px;
+            border: 1px solid var(--border);
+            max-height: 240px;
+            overflow-y: auto;
+        }
+
+        .policy-line {
+            line-height: 1.5;
+            color: var(--text-muted);
+        }
+        .policy-line.alert { color: var(--indicator-risk); }
+        .policy-line.success { color: var(--primary); }
+        .policy-line.info { color: var(--indicator-thinking); }
+
+        .telemetry-row {
+            display: flex;
+            justify-content: space-between;
+            font-size: 12px;
+            padding: 6px 0;
+            border-bottom: 1px solid rgba(35, 53, 84, 0.4);
+        }
+        .telemetry-label { color: var(--text-muted); }
+        .telemetry-value { color: #ffffff; font-family: monospace; }
+
+    </style>
+</head>
+<body>
+    <div class="dashboard-container">
+
+        <div class="status-header-bar">
+            <div>当前活动业务域：<span style="color: var(--primary); font-weight: bold;">核心支付与库存域（Stock & Order Domain）</span></div>
+            <div style="display: flex; align-items: center; gap: 16px;">
+                <span id="agentStatusTag" class="tag-btn" style="border-color: var(--border); color: var(--text-muted);">
+                    <span id="lampDot" class="status-lamp" style="background: #555; margin-right: 4px;"></span> <span id="statusText">Agent Idle (待命状态)</span>
+                </span>
+                <span style="color: var(--text-muted);">控制平面同步率: <b style="color:#fff">100% (WebSocket Connected)</b></span>
+            </div>
+        </div>
+
+        <div class="requirement-canvas-grid">
+
+            <div class="panel-box">
+                <div class="panel-header">
+                    <div class="panel-title">🔍 Context Explorer (自动深度追踪)</div>
+                </div>
+                <div class="context-explorer">
+                    
+                    <div class="context-section">
+                        <div class="context-section-title">🧬 锁定 AST 代码变更深度依赖</div>
+                        <div class="context-item matched">
+                            <span>order-service/domain/Order.go</span>
+                            <span style="color:var(--primary)">[AST 对齐]</span>
+                        </div>
+                        <div class="context-item matched">
+                            <span>stock-service/api/deduct.grpc</span>
+                            <span style="color:var(--primary)">[依赖绑定]</span>
+                        </div>
+                    </div>
+
+                    <div class="context-section">
+                        <div class="context-section-title">📄 关联历史架构决策记录 (ADR)</div>
+                        <div class="context-item matched">
+                            <span>ADR-012: 选用Redis高并发红锁</span>
+                            <span style="color:var(--indicator-toolcall)">[引入规则]</span>
+                        </div>
+                        <div class="context-item matched">
+                            <span>ADR-009: 金融资产严禁弱一致设计</span>
+                            <span style="color:var(--indicator-toolcall)">[合规基线]</span>
+                        </div>
+                    </div>
+
+                    <div class="context-section" id="rcaSection">
+                        <div class="context-section-title">⚠️ 关联组织故障数字孪生记忆 (RCA)</div>
+                        <div class="context-item" id="rcaItem">
+                            <span>RCA-2025: 营销超卖死锁事故报告</span>
+                            <span style="color:var(--text-muted)" id="rcaBadge">[等待意图关联]</span>
+                        </div>
+                    </div>
+
+                </div>
+            </div>
+
+            <div class="panel-box" style="gap: 20px;">
+                <div class="panel-header">
+                    <div class="panel-title">📝 原始业务意图输入画布 (Intent Ingestion View)</div>
+                    <span style="font-size: 11px; color: var(--text-muted);">拒绝传统PRD文字堆砌，由此激发全域测试先行(TDD)契约</span>
+                </div>
+
+                <div class="intent-input-area">
+                    <textarea id="intentInput" class="textarea-cyber" placeholder="请在此输入您的业务需求意图描述，或者点击下方企业级高频架构演进资产模板..."></textarea>
+                    <div class="template-tags">
+                        <span class="tag-btn" onclick="applyTemplate(1)">⚡ 模板一：高并发满减秒杀防超卖重构</span>
+                        <span class="tag-btn" onclick="applyTemplate(2)">💳 模板二：聚合支付渠道契约自动拓扑</span>
+                    </div>
+                    <div class="action-bar">
+                        <button class="btn-trigger" id="btnRun" onclick="triggerRequirementAgent()">
+                            <span>🤖 激活 Requirement Agent 逆向解构</span>
+                        </button>
+                    </div>
+                </div>
+
+                <div class="bdd-container" id="bddContainer">
+                    <div class="panel-header" style="border-bottom-color: rgba(35,53,84,0.4); padding-bottom: 6px;">
+                        <div class="panel-title" style="font-size: 13px; color: var(--primary);">📋 逆向推演生成的 Gherkin BDD 自动化契约断言实体</div>
+                        <span style="font-size: 11px; color: var(--indicator-awaiting);">PM 可在此勾选、补漏、微调断言</span>
+                    </div>
+
+                    <div class="bdd-scenario-block">
+                        <div class="bdd-scenario-header">
+                            <span>场景 1 (Scenario): 正常黄金链路高并发减库存</span>
+                            <span style="color: var(--primary); font-size:11px;">[自动关联 AST]</span>
+                        </div>
+                        <table class="bdd-table">
+                            <tr>
+                                <td class="checkbox-cell"><input type="checkbox" checked></td>
+                                <td class="keyword-cell">Given</td>
+                                <td class="expression-cell"><input type="text" value="用户发起秒杀活动减库存请求，且 Redis 分布式红锁可用"></td>
+                            </tr>
+                            <tr>
+                                <td class="checkbox-cell"><input type="checkbox" checked></td>
+                                <td class="keyword-cell">When</td>
+                                <td class="expression-cell"><input type="text" value="调用下游 stock-service/api/deduct.grpc 分布式限流核心接口"></td>
+                            </tr>
+                            <tr>
+                                <td class="checkbox-cell"><input type="checkbox" checked></td>
+                                <td class="keyword-cell">Then</td>
+                                <td class="expression-cell"><input type="text" value="沙箱高并发验证数据库标记扣减成功，返回原子状态成功，且投递延迟对账MQ"></td>
+                            </tr>
+                        </table>
+                    </div>
+
+                    <div class="bdd-scenario-block" id="scenarioLockRisk" style="border-color: rgba(255, 77, 79, 0.2);">
+                        <div class="bdd-scenario-header">
+                            <span>场景 2 (Scenario): 极限并发下的重试与死锁防御拦截</span>
+                            <span style="color: var(--indicator-risk); font-size:11px;" id="riskBadge">🚨 检测到 RCA-2025 历史重合暗坑！</span>
+                        </div>
+                        <table class="bdd-table">
+                            <tr>
+                                <td class="checkbox-cell"><input type="checkbox" checked></td>
+                                <td class="keyword-cell">Given</td>
+                                <td class="expression-cell"><input type="text" value="同一用户在 50ms 内发起针对同件商品的重复减库存请求（网络重试）"></td>
+                            </tr>
+                            <tr>
+                                <td class="checkbox-cell"><input type="checkbox" checked></td>
+                                <td class="keyword-cell">When</td>
+                                <td class="expression-cell"><input type="text" value="Redis 红锁捕获连接超时且持有期未释放 (触发超卖死锁判定)"></td>
+                            </tr>
+                            <tr>
+                                <td class="checkbox-cell"><input type="checkbox" checked></td>
+                                <td class="keyword-cell">Then</td>
+                                <td class="expression-cell"><input type="text" value="强行下发非阻塞熔断保护，回滚事务，抛出 HTTP 429 幂等拦截状态"></td>
+                            </tr>
+                        </table>
+                    </div>
+
+                    <div class="action-bar" style="gap: 12px;">
+                        <button class="tag-btn" style="border-radius:3px; padding: 6px 12px;" onclick="alert('已为控制平面追加自定义场景实体桩。')">+ 增加自定义契约断言桩 (Add Clause)</button>
+                        <button class="btn-trigger" style="background: rgba(74,246,38,0.1); border-color:var(--indicator-awaiting); color:var(--indicator-awaiting);" onclick="submitToArchitectureAgent()">
+                            <span>确认规则，下发下游 Architecture Agent 实施实现</span>
+                        </button>
+                    </div>
+
+                </div>
+
+            </div>
+
+            <div class="panel-box">
+                
+                <div class="panel-box" style="background:transparent; border:none; padding:0;">
+                    <div class="panel-header">
+                        <div class="panel-title">📊 需求解构执行遥测 (Telemetry)</div>
+                    </div>
+                    <div style="padding-top: 6px;">
+                        <div class="telemetry-row"><span class="telemetry-label">模型网关大脑</span><span class="telemetry-value">Gemini-2.0-Flash (特化解构版)</span></div>
+                        <div class="telemetry-row"><span class="telemetry-label">混合对齐精准度</span><span class="telemetry-value" style="color:var(--primary)">99.4% (Graph-RAG 锁定)</span></div>
+                        <div class="telemetry-row"><span class="telemetry-label">上下文消耗 Token</span><span class="telemetry-value" id="tokenCount">0 Tokens</span></div>
+                        <div class="telemetry-row"><span class="telemetry-label">自动生成 BDD 契约</span><span class="telemetry-value" id="clauseCount">0 条</span></div>
+                    </div>
+                </div>
+
+                <div class="panel-box" style="background:transparent; border:none; padding:0; margin-top: 10px;">
+                    <div class="panel-header">
+                        <div class="panel-title">🛡️ 需求合规防护墙审计日志 (OPA Audit)</div>
+                    </div>
+                    <div class="policy-stream" id="reqPolicyStream">
+                        <div class="policy-line">[SYS] 15:40:01 接入层就绪，等待 PM 业务意图注入...</div>
+                        <div class="policy-line">[OPA] 注入基线监听：未检测到不合规违规关键字阻断。</div>
+                    </div>
+                </div>
+
+            </div>
+
+        </div>
+
+    </div>
+
+    <script>
+        const templates = {
+            1: "实现大促秒杀高并发减库存功能。需要对齐 order-service 服务的 Order.go 进行架构调整，要求采用最严格的幂等策略，引入分布式锁，对接 stock-service 的 deduct 契约，彻底杜绝高并发超卖问题，防范死锁风险。",
+            2: "接入全新第三方聚合跨境支付通道（契约审查）。需要保障对账弱一致性的最终兜底能力，自动推演微服务边界契约，对敏感的用户卡号密码资产在输入模型层实施动态脱敏，拦截硬编码高危漏洞。"
+        };
+
+        function applyTemplate(id) {
+            document.getElementById('intentInput').value = templates[id];
+        }
+
+        // 模拟 Requirement Agent 多状态联动流转交互
+        function triggerRequirementAgent() {
+            const text = document.getElementById('intentInput').value.trim();
+            if(!text) {
+                alert('请先输入或选择一个意图模板！');
+                return;
+            }
+
+            const lampDot = document.getElementById('lampDot');
+            const statusText = document.getElementById('statusText');
+            const agentStatusTag = document.getElementById('agentStatusTag');
+            const stream = document.getElementById('reqPolicyStream');
+
+            // 1. 蓝色：Thinking 状态
+            lampDot.className = "status-lamp lamp-thinking";
+            statusText.innerText = "Requirement Agent Thinking...";
+            agentStatusTag.style.borderColor = "var(--indicator-thinking)";
+            agentStatusTag.style.color = "var(--indicator-thinking)";
+
+            appendLog('[INFO] 15:44:10 Requirement Agent 激活。启动全域知识检索。', 'info');
+            appendLog('[Graph-RAG] 正在回溯代码库 AST 拓扑，深度为 3 层...', 'policy-line');
+
+            // 模拟时序演进：2秒后切换为黄色 Tool Call
+            setTimeout(() => {
+                lampDot.className = "status-lamp lamp-toolcall";
+                statusText.innerText = "Tool Calling (Context Alignment)...";
+                agentStatusTag.style.borderColor = "var(--indicator-toolcall)";
+                agentStatusTag.style.color = "var(--indicator-toolcall)";
+                
+                appendLog('[TOOL CALL] 命中私有知识库！读取 ADR-012 与 ADR-009 架构决策标准。', 'policy-line');
+                
+                // 触发历史故障暗坑关联高亮（RCA-2025）
+                const rcaItem = document.getElementById('rcaItem');
+                const rcaBadge = document.getElementById('rcaBadge');
+                rcaItem.className = "context-item danger-hit";
+                rcaBadge.innerText = "🚨 意图重合度 91.4% (高危撞击)";
+                rcaBadge.style.color = "var(--indicator-risk)";
+                
+                appendLog('[RISK ALERT] 警告：当前需求意图极大概率存在 2025 年超卖停机事故的历史同类暗坑死锁风险！安全治理硬性拦截介入。', 'alert');
+
+                document.getElementById('tokenCount').innerText = "345,920 Tokens";
+
+            }, 2000);
+
+            // 再过 2.5 秒后完成，转为绿色 Awaiting Human Review 并将 BDD 实体局部无刷新渲染出来
+            setTimeout(() => {
+                lampDot.className = "status-lamp lamp-awaiting";
+                statusText.innerText = "Awaiting Human Review (推演就绪)";
+                agentStatusTag.style.borderColor = "var(--indicator-awaiting)";
+                agentStatusTag.style.color = "var(--indicator-awaiting)";
+
+                appendLog('[OPA SUCCESS] 策略解构合规通过，逆向 Gherkin BDD 测试先行契约断言矩阵构造完毕。', 'success');
+                appendLog('[HITL] 挂起进入人类最终决策卡点，等待产品经理核对确认...', 'success');
+
+                // 展现 BDD 结果
+                document.getElementById('bddContainer').style.display = 'flex';
+                document.getElementById('clauseCount').innerText = "6 条";
+
+                // 闪烁警示效果
+                const rowRisk = document.getElementById('scenarioLockRisk');
+                rowRisk.style.background = 'rgba(255, 77, 79, 0.08)';
+                setTimeout(() => { rowRisk.style.background = 'var(--bg-card)'; }, 800);
+
+            }, 4500);
+        }
+
+        function appendLog(txt, className) {
+            const stream = document.getElementById('reqPolicyStream');
+            const line = document.createElement('div');
+            line.className = 'policy-line ' + (className || '');
+            line.innerText = txt;
+            stream.appendChild(line);
+            stream.scrollTop = stream.scrollHeight;
+        }
+
+        function submitToArchitectureAgent() {
+            alert('人类 PM 最终契约签发成功！BDD 自动化用例集已固化锁入 Context 共享总线。控制平面已唤醒下游 Architecture Agent，正在自动为您推演分布式时序图与 CAP 影响平衡模型。');
+        }
+    </script>
+</body>
+</html>
