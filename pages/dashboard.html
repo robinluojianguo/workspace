@@ -1,0 +1,700 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI-Native Engineering Platform - Dashboard</title>
+    <style>
+        :root {
+            --bg-main: #0A192F;
+            --bg-card: #112240;
+            --bg-body: #020C1B;
+            --primary: #00F5D4; /* AI Mint Green */
+            --primary-hover: #00d1b2;
+            --text-main: #E2E8F0;
+            --text-muted: #8892B0;
+            --border: #233554;
+            --indicator-thinking: #64DFDF; /* 🔵 Blue */
+            --indicator-awaiting: #4af626; /* 🟢 Green */
+            --indicator-toolcall: #ee9b00; /* 🟡 Yellow */
+            --indicator-risk: #ff4d4f;     /* 🔴 Red */
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Google Sans', 'Segoe UI', -apple-system, BlinkMacSystemFont, sans-serif;
+        }
+
+        body {
+            background-color: var(--bg-body);
+            color: var(--text-main);
+            overflow-x: hidden;
+            padding-bottom: 40px;
+        }
+
+        /* 顶部通栏导航 */
+        .navbar {
+            background-color: var(--bg-main);
+            border-bottom: 1px solid var(--border);
+            padding: 0 24px;
+            height: 60px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+
+        .nav-logo {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            font-size: 16px;
+            font-weight: bold;
+            letter-spacing: 0.5px;
+        }
+
+        .nav-logo span {
+            color: var(--primary);
+        }
+
+        .nav-links {
+            display: flex;
+            gap: 24px;
+            height: 100%;
+        }
+
+        .nav-item {
+            display: flex;
+            align-items: center;
+            color: var(--text-muted);
+            text-decoration: none;
+            font-size: 14px;
+            border-bottom: 2px solid transparent;
+            transition: all 0.3s;
+            cursor: pointer;
+        }
+
+        .nav-item.active, .nav-item:hover {
+            color: var(--primary);
+            border-bottom-color: var(--primary);
+        }
+
+        /* 统一网格布局主体 */
+        .dashboard-container {
+            max-width: 1600px;
+            margin: 24px auto;
+            padding: 0 24px;
+            display: flex;
+            flex-direction: column;
+            gap: 24px;
+        }
+
+        /* 顶层度量核心看板 Row */
+        .metrics-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 20px;
+        }
+
+        .metric-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            padding: 20px;
+            position: relative;
+            overflow: hidden;
+            transition: border-color 0.3s;
+        }
+
+        .metric-card:hover {
+            border-color: var(--primary);
+        }
+
+        .metric-title {
+            font-size: 13px;
+            color: var(--text-muted);
+            margin-bottom: 8px;
+            display: flex;
+            justify-content: space-between;
+        }
+
+        .metric-value {
+            font-size: 28px;
+            font-weight: bold;
+            color: #ffffff;
+            margin-bottom: 4px;
+        }
+
+        .metric-value span {
+            font-size: 14px;
+            font-weight: normal;
+            margin-left: 4px;
+        }
+
+        .metric-trend {
+            font-size: 11px;
+            color: var(--primary);
+        }
+
+        .metric-trend.negative {
+            color: var(--indicator-risk);
+        }
+
+        /* 二级核心功能排版：左七右三 */
+        .main-content-split {
+            display: grid;
+            grid-template-columns: 2fr 1fr;
+            gap: 24px;
+        }
+
+        @media (max-width: 1200px) {
+            .main-content-split {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .panel-box {
+            background: var(--bg-main);
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+        }
+
+        .panel-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid var(--border);
+            padding-bottom: 12px;
+        }
+
+        .panel-title {
+            font-size: 14px;
+            font-weight: bold;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        /* 工作流 DAG 异步平原流水线 */
+        .workflow-stream {
+            display: flex;
+            flex-direction: column;
+            gap: 14px;
+        }
+
+        .wf-row {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 4px;
+            padding: 14px;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .wf-info {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 13px;
+        }
+
+        .wf-id {
+            font-weight: bold;
+            color: var(--primary);
+        }
+
+        .wf-nodes-path {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            overflow-x: auto;
+            padding-bottom: 4px;
+        }
+
+        .node-capsule {
+            background: var(--bg-main);
+            border: 1px solid var(--border);
+            padding: 6px 12px;
+            border-radius: 4px;
+            font-size: 12px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            white-space: nowrap;
+        }
+
+        .node-capsule.active {
+            border-color: var(--primary);
+            box-shadow: 0 0 8px rgba(0, 245, 212, 0.15);
+        }
+
+        .node-arrow {
+            color: var(--text-muted);
+            font-size: 12px;
+        }
+
+        /* 状态呼吸灯体系 */
+        .status-lamp {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            display: inline-block;
+        }
+        .lamp-thinking { background: var(--indicator-thinking); box-shadow: 0 0 6px var(--indicator-thinking); }
+        .lamp-awaiting { background: var(--indicator-awaiting); box-shadow: 0 0 6px var(--indicator-awaiting); }
+        .lamp-toolcall { background: var(--indicator-toolcall); box-shadow: 0 0 6px var(--indicator-toolcall); }
+        .lamp-risk { background: var(--indicator-risk); box-shadow: 0 0 6px var(--indicator-risk); }
+
+        /* 人机协同收件箱 (HITL) */
+        .hitl-list {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .hitl-card {
+            border-left: 3px solid var(--indicator-risk);
+            background: var(--bg-card);
+            padding: 12px;
+            border-radius: 0 4px 4px 0;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .hitl-meta {
+            display: flex;
+            justify-content: space-between;
+            font-size: 12px;
+            color: var(--text-muted);
+        }
+
+        .hitl-body {
+            font-size: 13px;
+            line-height: 1.4;
+        }
+
+        .hitl-actions {
+            display: flex;
+            gap: 8px;
+            margin-top: 4px;
+        }
+
+        .btn {
+            padding: 5px 12px;
+            font-size: 11px;
+            border-radius: 3px;
+            cursor: pointer;
+            border: 1px solid transparent;
+            font-weight: bold;
+            transition: all 0.2s;
+        }
+
+        .btn-primary {
+            background: rgba(0, 245, 212, 0.1);
+            color: var(--primary);
+            border-color: var(--primary);
+        }
+
+        .btn-primary:hover {
+            background: var(--primary);
+            color: var(--bg-main);
+        }
+
+        .btn-secondary {
+            background: transparent;
+            color: var(--text-muted);
+            border-color: var(--border);
+        }
+
+        .btn-secondary:hover {
+            border-color: var(--text-main);
+            color: var(--text-main);
+        }
+
+        /* 右栏：执行平面 Agent 集群 */
+        .agent-cluster-list {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .agent-telemetry-row {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            padding: 10px 14px;
+            border-radius: 4px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .agent-telemetry-row:hover {
+            border-color: var(--primary);
+            background: rgba(17, 34, 64, 0.8);
+        }
+
+        .agent-meta-left {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+
+        .agent-title-text {
+            font-size: 13px;
+            font-weight: bold;
+        }
+
+        .agent-sub-text {
+            font-size: 11px;
+            color: var(--text-muted);
+        }
+
+        .agent-status-tag {
+            font-size: 11px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            padding: 3px 8px;
+            background: var(--bg-main);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+        }
+
+        /* 侧滑探测面板 Inspector Box */
+        .inspector-box {
+            margin-top: 6px;
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 4px;
+            padding: 12px;
+            font-size: 12px;
+            display: none;
+        }
+
+        .inspector-row {
+            display: flex;
+            justify-content: space-between;
+            padding: 4px 0;
+            border-bottom: 1px solid rgba(35, 53, 84, 0.4);
+        }
+
+        .inspector-row:last-child { border: none; }
+        .inspector-label { color: var(--text-muted); }
+        .inspector-value { color: #ffffff; font-family: monospace; }
+
+        /* 策略动态日志流水 */
+        .policy-stream {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            font-family: monospace;
+            font-size: 11px;
+            background: var(--bg-body);
+            padding: 12px;
+            border-radius: 4px;
+            border: 1px solid var(--border);
+            max-height: 200px;
+            overflow-y: auto;
+        }
+
+        .policy-line {
+            line-height: 1.5;
+            color: var(--text-muted);
+        }
+
+        .policy-line.alert { color: var(--indicator-risk); }
+        .policy-line.success { color: var(--primary); }
+
+    </style>
+</head>
+<body>
+
+    <!-- 顶部统一导航栏 -->
+    <div class="navbar">
+        <div class="nav-logo">
+            🧬 <span>AI-Native Engineering OS</span> 人机协同研发操作系统
+        </div>
+        <div class="nav-links">
+            <a class="nav-item active">📊 仪表盘控制台</a>
+            <a class="nav-item" onclick="alert('无缝切入核心开发画布：AI Dev Workspace')">💻 AI 协同工作区</a>
+            <a class="nav-item" onclick="alert('正在载入控制平面：Workflow 有向无环图编排中心')">🔄 Workflow 编排中心</a>
+            <a class="nav-item" onclick="alert('进入治理层：OPA策略中心与数据脱敏审计')">🛡️ 安全与治理中心</a>
+        </div>
+    </div>
+
+    <!-- 仪表盘核心容器 -->
+    <div class="dashboard-container">
+
+        <!-- 第一层：全局可量化数字资产指标 -->
+        <div class="metrics-grid">
+            <div class="metric-card">
+                <div class="metric-title">企业私有代码有效采纳率 <span>采纳/生成</span></div>
+                <div class="metric-value">74.8<span>%</span></div>
+                <div class="metric-trend">▲ 较上周提升 4.2% (Context增强注入生效)</div>
+            </div>
+            <div class="metric-card">
+                <div class="metric-title">企业上下文 RAG 综合精准度 <span>混合对齐打分</span></div>
+                <div class="metric-value">98.4<span>%</span></div>
+                <div class="metric-trend">▲ Graph-RAG 代码拓扑深度检索自适应对齐</div>
+            </div>
+            <div class="metric-card">
+                <div class="metric-title">隔离沙箱环境自动编译自愈率 <span>Self-Healing</span></div>
+                <div class="metric-value">89.1<span>%</span></div>
+                <div class="metric-trend">▲ TDD 闭环故障异常自动回喂修复成功</div>
+            </div>
+            <div class="metric-card">
+                <div class="metric-title">主动策略阻断与凭证脱敏率 <span>Governance</span></div>
+                <div class="metric-value">99.2<span>%</span></div>
+                <div class="metric-trend" style="color:var(--text-muted)">■ 拦截硬编码漏洞 14 起，脱敏源码 IP 1285次</div>
+            </div>
+        </div>
+
+        <!-- 第二层：左七右三控制平面解构 -->
+        <div class="main-content-split">
+            
+            <!-- 左侧主面板区域 -->
+            <div style="display: flex; flex-direction: column; gap: 24px;">
+                
+                <!-- 模块一：当前活跃工作流状态监控（DAG 异步平原） -->
+                <div class="panel-box">
+                    <div class="panel-header">
+                        <div class="panel-title">🔄 控制平面正在流转的异步长周期流水线 (Active Workflows)</div>
+                        <span style="font-size: 12px; color: var(--primary);">实时监听中 (WebSocket)</span>
+                    </div>
+                    <div class="workflow-stream">
+                        
+                        <!-- 任务 1 -->
+                        <div class="wf-row">
+                            <div class="wf-info">
+                                <div>工作流实例：<span class="wf-id">#wf-inst-99823</span> —— 订单中心高并发减库存架构重构</div>
+                                <div style="color: var(--indicator-toolcall);">⏳ 沙箱编译执行中</div>
+                            </div>
+                            <div class="wf-nodes-path">
+                                <div class="node-capsule"><span class="status-lamp lamp-awaiting"></span> 需求解构</div>
+                                <div class="node-arrow">➔</div>
+                                <div class="node-capsule"><span class="status-lamp lamp-awaiting"></span> 架构推演 (ADR-012)</div>
+                                <div class="node-arrow">➔</div>
+                                <div class="node-capsule active" style="background: rgba(238,155,0,0.05);"><span class="status-lamp lamp-toolcall"></span> 沙箱 TDD 编译 (第3次自愈)</div>
+                                <div class="node-arrow">➔</div>
+                                <div class="node-capsule" style="color:var(--text-muted);"><span class="status-lamp" style="background:#555;"></span> 策略扫描</div>
+                                <div class="node-arrow">➔</div>
+                                <div class="node-capsule" style="color:var(--text-muted);"><span class="status-lamp" style="background:#555;"></span> Canary 灰度发布</div>
+                            </div>
+                        </div>
+
+                        <!-- 任务 2 -->
+                        <div class="wf-row">
+                            <div class="wf-info">
+                                <div>工作流实例：<span class="wf-id">#wf-inst-99811</span> —— 支付网关统一认证中心接入契约审查</div>
+                                <div style="color: var(--indicator-awaiting);">🟢 等待人类 Tech Lead 最终决策</div>
+                            </div>
+                            <div class="wf-nodes-path">
+                                <div class="node-capsule"><span class="status-lamp lamp-awaiting"></span> 原始意图输入</div>
+                                <div class="node-arrow">➔</div>
+                                <div class="node-capsule"><span class="status-lamp lamp-awaiting"></span> 接口契约生成</div>
+                                <div class="node-arrow">➔</div>
+                                <div class="node-capsule"><span class="status-lamp lamp-awaiting"></span> SAST 静态分析</div>
+                                <div class="node-arrow">➔</div>
+                                <div class="node-capsule active" style="border-color: var(--indicator-awaiting); background: rgba(74,246,38,0.05);"><span class="status-lamp lamp-awaiting"></span> OPA 权限卡点审计</div>
+                                <div class="node-arrow">➔</div>
+                                <div class="node-capsule" style="color:var(--text-muted);"><span class="status-lamp" style="background:#555;"></span> 合流合规合并</div>
+                            </div>
+                        </div>
+
+                    </div>
+                </div>
+
+                <!-- 模块二：人机协同收件箱（HITL 待办卡点审批） -->
+                <div class="panel-box">
+                    <div class="panel-header">
+                        <div class="panel-title">📥 我的待办 · 人类最终决策拦截中心 (Human-in-the-loop)</div>
+                        <span style="font-size: 12px; color: var(--text-muted);">保留人类最终最高审计与控制权</span>
+                    </div>
+                    <div class="hitl-list">
+                        
+                        <div class="hitl-card" id="hitlCard1">
+                            <div class="hitl-meta">
+                                <span style="color:var(--indicator-risk); font-weight: bold;">🚨 [OPA 策略防御红线越权卡点]</span>
+                                <span>实例: #wf-inst-99823 | 触发时间: 1分钟前</span>
+                            </div>
+                            <div class="hitl-body">
+                                <strong>高危行为告警：</strong> Coding Agent 在 MicroVM 隔离沙箱重构测试中，试图对生产环境内部核心 IP 执行探测嗅探扫描。安全层网格已实施<b>“动态敏感数据脱敏”</b>，隐藏真实资产并将目标安全重定向脱敏为 <span style="color:var(--primary)">[MASK_IP_1]</span>。当前 Agent 行为已被策略机制硬性挂起，需要高级架构师人工介入豁免或回导重推。
+                            </div>
+                            <div class="hitl-actions" id="hitlActions1">
+                                <button class="btn btn-primary" onclick="approveHitl(1)">批准安全降级（豁免流转）</button>
+                                <button class="btn btn-secondary" onclick="rejectHitl(1)">硬性拦截并要求 Agent 重导策略</button>
+                            </div>
+                        </div>
+
+                        <div class="hitl-card" style="border-left-color: var(--indicator-thinking);">
+                            <div class="hitl-meta">
+                                <span style="color:var(--indicator-thinking); font-weight: bold;">📐 [分布式 CAP 架构背离提示]</span>
+                                <span>实例: #wf-inst-99754 | 触发时间: 2小时前</span>
+                            </div>
+                            <div class="hitl-body">
+                                <strong>架构合规审查：</strong> Architecture Agent 在推演营销秒杀模块时，为了达到 100,000 QPS 的高吞吐量指标，设计了基于 RocketMQ 的异步弱一致性架构。这与企业核心规范文档 <code>《ADR-009: 金融资产严禁最终一致性设计》</code> 产生冲突冲突，需人工进行架构双向评审裁决。
+                            </div>
+                            <div class="hitl-actions">
+                                <button class="btn btn-secondary" onclick="alert('已采纳 AI 的弱一致性高吞吐设计，并自动追加补偿工作流。')">采纳 AI 优化方案</button>
+                                <button class="btn btn-secondary" onclick="alert('强制维持 ADR-009 强一致规范，Agent 已收到指令重新生成代码骨架。')">驳回并遵循传统严苛规范</button>
+                            </div>
+                        </div>
+
+                    </div>
+                </div>
+
+            </div>
+
+            <!-- 右侧主面板区域：执行平面与其可观测性状态 -->
+            <div style="display: flex; flex-direction: column; gap: 24px;">
+                
+                <!-- 模块三：执行平面特化 Agent 集群监控 -->
+                <div class="panel-box">
+                    <div class="panel-header">
+                        <div class="panel-title">🤖 执行平面特化 Agent 运行态势 (Agent Cluster)</div>
+                    </div>
+                    <div class="agent-cluster-list">
+                        
+                        <div class="agent-telemetry-row" onclick="toggleInspector('req')">
+                            <div class="agent-meta-left">
+                                <span class="agent-title-text">Requirement Agent (需求分析)</span>
+                                <span class="agent-sub-text">负责反向解构意图与推演场景用例</span>
+                            </div>
+                            <div class="agent-status-tag"><span class="status-lamp lamp-awaiting"></span> Awaiting</div>
+                        </div>
+                        <div class="inspector-box" id="inspect-req">
+                            <div class="inspector-row"><span class="inspector-label">模型路由网关</span><span class="inspector-value">Gemini-2.0-Flash (企业路由优化版)</span></div>
+                            <div class="inspector-row"><span class="inspector-label">累计消耗 Token</span><span class="inspector-value">1,452,900 Tokens</span></div>
+                            <div class="inspector-row"><span class="inspector-label">知识关联深度</span><span class="inspector-value">Jira Graph / PRD Chunks 对齐</span></div>
+                        </div>
+
+                        <div class="agent-telemetry-row" onclick="toggleInspector('arch')">
+                            <div class="agent-meta-left">
+                                <span class="agent-title-text">Architecture Agent (架构推演)</span>
+                                <span class="agent-sub-text">建立微服务拓扑模型与时序流转图</span>
+                            </div>
+                            <div class="agent-status-tag"><span class="status-lamp lamp-thinking"></span> Thinking</div>
+                        </div>
+                        <div class="inspector-box" id="inspect-arch">
+                            <div class="inspector-row"><span class="inspector-label">模型路由网关</span><span class="inspector-value">Gemini-1.5-Pro (长上下文博弈大脑)</span></div>
+                            <div class="inspector-row"><span class="inspector-label">当前会话时延</span><span class="inspector-value">4,850ms (拓扑多维推导中)</span></div>
+                            <div class="inspector-row"><span class="inspector-label">依赖追踪算法</span><span class="inspector-value">Tree-sitter AST 全域血缘追踪</span></div>
+                        </div>
+
+                        <div class="agent-telemetry-row" onclick="toggleInspector('code')">
+                            <div class="agent-meta-left">
+                                <span class="agent-title-text">Coding & TDD Agent (代码孪生体)</span>
+                                <span class="agent-sub-text">在隔离的微型沙箱环境中自愈编写</span>
+                            </div>
+                            <div class="agent-status-tag" style="border-color:var(--indicator-toolcall);"><span class="status-lamp lamp-toolcall"></span> Tool Call</div>
+                        </div>
+                        <div class="inspector-box" id="inspect-code">
+                            <div class="inspector-row"><span class="inspector-label">沙箱隔离进程</span><span class="inspector-value">sandbox-container-99823 (MicroVM)</span></div>
+                            <div class="inspector-row"><span class="inspector-label">当前测试指令</span><span class="inspector-value">go test -v ./stock/domain/...</span></div>
+                            <div class="inspector-row"><span class="inspector-label">自动化测试覆盖率</span><span class="inspector-value">100% 断言覆盖通过率</span></div>
+                        </div>
+
+                        <div class="agent-telemetry-row" onclick="toggleInspector('sec')">
+                            <div class="agent-meta-left">
+                                <span class="agent-title-text">Security & Policy Agent (安全守门员)</span>
+                                <span class="agent-sub-text">执行 SAST 缺陷扫描与高危命令阻断</span>
+                            </div>
+                            <div class="agent-status-tag" style="border-color:var(--indicator-risk); color: var(--indicator-risk);"><span class="status-lamp lamp-risk"></span> Blocked</div>
+                        </div>
+                        <div class="inspector-box" id="inspect-sec">
+                            <div class="inspector-row"><span class="inspector-label">策略规则引擎</span><span class="inspector-value">OPA (Open Policy Agent) Rego运行时</span></div>
+                            <div class="inspector-row"><span class="inspector-label">历史触发告警</span><span class="inspector-value">Wipe-Out-Scan 高危扫描拦截异常</span></div>
+                            <div class="inspector-row"><span class="inspector-label">敏感脱敏数据网格</span><span class="inspector-value">已对真实生产环境网段实施清洗遮蔽</span></div>
+                        </div>
+
+                    </div>
+                </div>
+
+                <!-- 模块四：治理层实时审计与动态日志 -->
+                <div class="panel-box">
+                    <div class="panel-header">
+                        <div class="panel-title">🛡️ 治理层实时合规审计动态日志 (OPA Engine Logs)</div>
+                    </div>
+                    <div class="policy-stream" id="policyStream">
+                        <div class="policy-line">[INFO] 15:10:02 Context Platform 注入 order-service/domain/Order.go AST关系依赖树成功。</div>
+                        <div class="policy-line">[INFO] 15:10:05 Requirement Agent 已将业务规则提取转化为 5 组 BDD 测试用例。</div>
+                        <div class="policy-line">[WARN] 15:11:12 Coding Agent 在 MicroVM 编译沙箱中尝试读取系统环境内部端口变量。</div>
+                        <div class="policy-line alert">[SECURITY BLOCK] 15:11:13 触发企业级安全围栏！检测到对高危生产 IP 执行内网扫描嗅探尝试。行为已被策略卡断。</div>
+                        <div class="policy-line alert">[MASK ENGINE] 15:11:13 动态敏感脱敏激活。已将真实网络拓扑网格隐藏并重写映射为 [MASK_IP_1]。</div>
+                        <div class="policy-line">[SYS] 15:11:13 异步任务进程 wf-inst-99823 状态挂起，进入 AWAITING_HUMAN_REVIEW 阶段，等待 Tech Lead 审查决策...</div>
+                    </div>
+                </div>
+
+            </div>
+
+        </div>
+
+    </div>
+
+    <!-- 原型前端交互模拟 JavaScript 联动控制 -->
+    <script>
+        // 展开与收起 Agent 详细遥测数据的 Inspector 箱体
+        function toggleInspector(agentKey) {
+            const el = document.getElementById('inspect-' + agentKey);
+            if (el.style.display === 'block') {
+                el.style.display = 'none';
+            } else {
+                // 先关闭所有，再打开当前
+                document.querySelectorAll('.inspector-box').forEach(box => box.style.display = 'none');
+                el.style.display = 'block';
+            }
+        }
+
+        // 人类最终决策拦截点 (HITL) 交互模拟
+        function approveHitl(id) {
+            if(id === 1) {
+                const card = document.getElementById('hitlCard1');
+                const actions = document.getElementById('hitlActions1');
+                const stream = document.getElementById('policyStream');
+                
+                // 模拟逆转卡点状态，转入绿色已放行安全状态
+                card.style.borderLeftColor = 'var(--indicator-awaiting)';
+                card.style.background = 'rgba(74,246,38,0.02)';
+                
+                card.innerHTML = `
+                    <div class="hitl-meta">
+                        <span style="color:var(--indicator-awaiting); font-weight: bold;">🟢 [人类架构师 HITL 已安全放行]</span>
+                        <span>实例: #wf-inst-99823 | 审批时间: 刚刚</span>
+                    </div>
+                    <div class="hitl-body" style="color: var(--text-muted);">
+                        人类 Tech Lead 已批准此次动态数据脱敏层安全降级豁免审计。网格流量已完成无害清洗并允许向下游流转，沙箱容器解冻，下一阶段自动化 TDD 合流测试流水线已恢复并发激活。
+                    </div>
+                `;
+                
+                // 实时无刷新局部追加 LIVE STREAM AUDIT LOGS
+                const logLine = document.createElement('div');
+                logLine.className = 'policy-line success';
+                logLine.innerText = '[PASSED BY HUMAN] 15:13:45 人类架构师执行最高权限越权豁免，解除对实例 #wf-inst-99823 的挂起拦截。沙箱编译流水线继续下推。';
+                stream.appendChild(logLine);
+                stream.scrollTop = stream.scrollHeight; // 滚动到底部
+                
+                alert('人类决策点（HITL）豁免批准成功！控制平面收到最高决策指令，wf-inst-99823 长周期流水线进程解锁并向下游演进。');
+            }
+        }
+
+        function rejectHitl(id) {
+            if(id === 1) {
+                alert('您已拒绝此次安全豁免。指令已重回控制平面：Coding Agent 被终止当前高危代码分支，将被强制回导重新推演不具备高危网络行为的安全合规自愈 Patch 代码。');
+                location.reload();
+            }
+        }
+    </script>
+</body>
+</html>
